@@ -4,6 +4,7 @@ members = [
     "wardend-proto",
     "wardend-core",
     "wardend-cli",
+    "wardend-plugin-setuid-audit",
 ]
 
 [workspace.lints.rust]

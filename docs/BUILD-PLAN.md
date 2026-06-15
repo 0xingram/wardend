@@ -29,7 +29,7 @@ Goal: an empty-but-correct workspace that compiles and passes CI.
 
 ---
 
-## Slice 1 — Walking skeleton (end-to-end, `setuid-audit`)  ☐
+## Slice 1 — Walking skeleton (end-to-end, `setuid-audit`)  ☑
 
 Goal: prove the **entire architecture** — protocol, subprocess, `--describe` handshake, status
 derivation, rendering — with the least possible module logic. Everything after this is "add
