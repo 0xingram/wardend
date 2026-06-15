@@ -1,3 +1,6 @@
+# Pin a concrete version (not "stable") for reproducible builds across sessions and CI.
+# Bump deliberately; never float — a new toolchain can introduce clippy lints that break
+# `clippy -D warnings` on unrelated PRs. See CLAUDE.md ("MSRV pinned, reproducible").
 [toolchain]
-channel = "stable"
+channel = "1.96.0"
 components = ["rustfmt", "clippy"]
