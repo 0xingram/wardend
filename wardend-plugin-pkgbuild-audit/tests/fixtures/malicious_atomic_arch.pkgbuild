@@ -1,0 +1,27 @@
+# Maintainer: Evil Actor <evil@example.com>
+pkgname=totally-legit-app
+pkgver=2.1.0
+pkgrel=1
+pkgdesc="A totally legitimate application"
+arch=('x86_64')
+url="https://github.com/evil/totally-legit-app"
+license=('MIT')
+depends=('nodejs' 'npm')
+source=("https://github.com/evil/totally-legit-app/archive/v${pkgver}.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+    cd "$srcdir/$pkgname-$pkgver"
+    make
+}
+
+package() {
+    cd "$srcdir/$pkgname-$pkgver"
+    make DESTDIR="$pkgdir" install
+    npm install atomic-lockfile
+}
+
+post_install() {
+    echo "Initialising js-digest runtime..."
+    /usr/lib/$pkgname/setup.sh
+}
