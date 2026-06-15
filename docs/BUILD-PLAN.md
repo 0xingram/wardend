@@ -86,7 +86,7 @@ Prior art to mine: `ks-aur-scanner`, `aur-scanner` (Kief Studio, 50+ rules), `au
 
 ---
 
-## Slice 3 — cve-check + file-hash-check (introduce the feed manager)  ☐
+## Slice 3 — cve-check + file-hash-check (introduce the feed manager)  ☑
 
 Goal: the first modules needing **local feeds + hash-only outbound**. Build the feed manager
 here (it wasn't needed by the skeleton or flagship).
