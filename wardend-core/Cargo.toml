@@ -4,5 +4,24 @@ version = "0.1.0"
 edition = "2024"
 license = "GPL-3.0-or-later"
 
+[[bin]]
+name = "wardend-core"
+path = "src/main.rs"
+
+[lib]
+name = "wardend_core"
+path = "src/lib.rs"
+
+[dependencies]
+wardend-proto = { path = "../wardend-proto" }
+tokio = { version = "1", features = ["full"] }
+serde_json = "1"
+anyhow = "1"
+uuid = { version = "1", features = ["v4"] }
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { version = "1", features = ["full"] }
+
 [lints]
 workspace = true
