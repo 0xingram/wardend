@@ -1076,6 +1076,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "wardend-plugin-rkhunter-wrapper"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "serde_json",
+ "wardend-proto",
+]
+
+[[package]]
 name = "wardend-plugin-setuid-audit"
 version = "0.1.0"
 dependencies = [

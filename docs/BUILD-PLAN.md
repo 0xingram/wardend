@@ -103,7 +103,7 @@ here (it wasn't needed by the skeleton or flagship).
 
 ---
 
-## Slice 4 — rkhunter-wrapper  ☐
+## Slice 4 — rkhunter-wrapper  ☑
 
 Goal: low-architectural-risk output-parsing shim; slots in any time after Slice 1.
 

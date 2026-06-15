@@ -8,6 +8,7 @@ members = [
     "wardend-plugin-pkgbuild-audit",
     "wardend-plugin-cve-check",
     "wardend-plugin-file-hash-check",
+    "wardend-plugin-rkhunter-wrapper",
 ]
 
 [workspace.lints.rust]
