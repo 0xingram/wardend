@@ -14,62 +14,84 @@ const BOLD: &str = "\x1b[1m";
 const DIM: &str = "\x1b[2m";
 const RESET: &str = "\x1b[0m";
 
-fn status_badge(status: &Status) -> String {
+fn esc(colour: bool, code: &str) -> &str {
+    if colour { code } else { "" }
+}
+
+fn status_badge(status: &Status, colour: bool) -> String {
+    let red = esc(colour, RED);
+    let yel = esc(colour, YELLOW);
+    let grn = esc(colour, GREEN);
+    let bld = esc(colour, BOLD);
+    let rst = esc(colour, RESET);
     match status {
-        Status::Pass => format!("{GREEN}{BOLD}[PASS]{RESET}"),
-        Status::Warn => format!("{YELLOW}{BOLD}[WARN]{RESET}"),
-        Status::Fail => format!("{RED}{BOLD}[FAIL]{RESET}"),
-        Status::Error => format!("{RED}{BOLD}[ERROR]{RESET}"),
+        Status::Pass => format!("{grn}{bld}[PASS]{rst}"),
+        Status::Warn => format!("{yel}{bld}[WARN]{rst}"),
+        Status::Fail => format!("{red}{bld}[FAIL]{rst}"),
+        Status::Error => format!("{red}{bld}[ERROR]{rst}"),
     }
 }
 
-fn severity_badge(severity: &Severity) -> String {
+fn severity_badge(severity: &Severity, colour: bool) -> String {
+    let red = esc(colour, RED);
+    let yel = esc(colour, YELLOW);
+    let cyn = esc(colour, CYAN);
+    let bld = esc(colour, BOLD);
+    let dim = esc(colour, DIM);
+    let rst = esc(colour, RESET);
     match severity {
-        Severity::Critical => format!("{RED}{BOLD}[CRITICAL]{RESET}"),
-        Severity::High => format!("{RED}[HIGH]{RESET}"),
-        Severity::Medium => format!("{YELLOW}[MEDIUM]{RESET}"),
-        Severity::Low => format!("{CYAN}[LOW]{RESET}"),
-        Severity::Info => format!("{DIM}[INFO]{RESET}"),
+        Severity::Critical => format!("{red}{bld}[CRITICAL]{rst}"),
+        Severity::High => format!("{red}[HIGH]{rst}"),
+        Severity::Medium => format!("{yel}[MEDIUM]{rst}"),
+        Severity::Low => format!("{cyn}[LOW]{rst}"),
+        Severity::Info => format!("{dim}[INFO]{rst}"),
     }
 }
 
 // ── Renderers ─────────────────────────────────────────────────────────────────
 
 /// Render in default (non-verbose) mode: one traffic-light line per module + narrative.
+/// Pass `colour: true` when stdout is a TTY, `false` when piped/redirected.
 #[must_use]
-pub fn render_default(reports: &[ModuleReport]) -> String {
+pub fn render_default(reports: &[ModuleReport], colour: bool) -> String {
     let mut out = String::new();
     out.push('\n');
     for r in reports {
         let _ = writeln!(
             out,
             "  {} {} \u{2014} {}",
-            status_badge(&r.status),
+            status_badge(&r.status, colour),
             r.result.module,
             r.result.summary,
         );
     }
     out.push('\n');
-    out.push_str(&narrative(reports));
+    out.push_str(&narrative(reports, colour));
     out.push('\n');
     out
 }
 
 /// Render in verbose mode: traffic-light + finding details with severity, detail, remediation.
+/// Pass `colour: true` when stdout is a TTY, `false` when piped/redirected.
 #[must_use]
-pub fn render_verbose(reports: &[ModuleReport]) -> String {
+pub fn render_verbose(reports: &[ModuleReport], colour: bool) -> String {
     let mut out = String::new();
     out.push('\n');
     for r in reports {
         let _ = writeln!(
             out,
             "  {} {} \u{2014} {}",
-            status_badge(&r.status),
+            status_badge(&r.status, colour),
             r.result.module,
             r.result.summary,
         );
         for f in &r.result.findings {
-            let _ = writeln!(out, "\n    {}  {}", severity_badge(&f.severity), f.title);
+            let _ = writeln!(
+                out,
+                "\n    {}  {}",
+                severity_badge(&f.severity, colour),
+                f.title
+            );
             let _ = writeln!(out, "           {}", f.detail);
             let _ = writeln!(out, "           {}", f.remediation);
         }
@@ -78,7 +100,7 @@ pub fn render_verbose(reports: &[ModuleReport]) -> String {
         }
     }
     out.push('\n');
-    out.push_str(&narrative(reports));
+    out.push_str(&narrative(reports, colour));
     out.push('\n');
     out
 }
@@ -91,9 +113,16 @@ pub fn render_json(reports: &[ModuleReport]) -> String {
 
 /// Build the overall narrative line (ADR-015 summary rules).
 #[must_use]
-pub fn narrative(reports: &[ModuleReport]) -> String {
+pub fn narrative(reports: &[ModuleReport], colour: bool) -> String {
+    let red = esc(colour, RED);
+    let yel = esc(colour, YELLOW);
+    let grn = esc(colour, GREEN);
+    let bld = esc(colour, BOLD);
+    let dim = esc(colour, DIM);
+    let rst = esc(colour, RESET);
+
     if reports.is_empty() {
-        return format!("{DIM}No modules were run.{RESET}");
+        return format!("{dim}No modules were run.{rst}");
     }
 
     let fail_count = reports.iter().filter(|r| r.status == Status::Fail).count();
@@ -104,24 +133,24 @@ pub fn narrative(reports: &[ModuleReport]) -> String {
 
     if fail_count > 0 {
         if fail_count == 1 {
-            parts.push(format!("{RED}{BOLD}1 issue needs your attention.{RESET}"));
+            parts.push(format!("{red}{bld}1 issue needs your attention.{rst}"));
         } else {
             parts.push(format!(
-                "{RED}{BOLD}{fail_count} issues need your attention.{RESET}"
+                "{red}{bld}{fail_count} issues need your attention.{rst}"
             ));
         }
     } else if warn_count > 0 {
         parts.push(format!(
-            "{YELLOW}{BOLD}{warn_count} {} worth a look.{RESET}",
+            "{yel}{bld}{warn_count} {} worth a look.{rst}",
             if warn_count == 1 { "thing" } else { "things" }
         ));
     } else {
-        parts.push(format!("{GREEN}{BOLD}Your system looks healthy.{RESET}"));
+        parts.push(format!("{grn}{bld}Your system looks healthy.{rst}"));
     }
 
     if error_count > 0 {
         parts.push(format!(
-            "{RED}{error_count} module{} could not be scanned — see above.{RESET}",
+            "{red}{error_count} module{} could not be scanned — see above.{rst}",
             if error_count == 1 { "" } else { "s" }
         ));
     }
@@ -204,7 +233,7 @@ mod tests {
 
     #[test]
     fn default_pass_contains_pass_badge_and_module_name() {
-        let out = render_default(&[pass_report()]);
+        let out = render_default(&[pass_report()], true);
         assert!(out.contains("PASS"), "expected PASS in: {out:?}");
         assert!(
             out.contains("setuid-audit"),
@@ -218,27 +247,39 @@ mod tests {
 
     #[test]
     fn default_fail_contains_fail_badge() {
-        let out = render_default(&[fail_report()]);
+        let out = render_default(&[fail_report()], true);
         assert!(out.contains("FAIL"), "expected FAIL in: {out:?}");
     }
 
     #[test]
     fn default_warn_contains_warn_badge() {
-        let out = render_default(&[warn_report()]);
+        let out = render_default(&[warn_report()], true);
         assert!(out.contains("WARN"), "expected WARN in: {out:?}");
     }
 
     #[test]
     fn default_error_contains_error_badge() {
-        let out = render_default(&[error_report()]);
+        let out = render_default(&[error_report()], true);
         assert!(out.contains("ERROR"), "expected ERROR in: {out:?}");
+    }
+
+    #[test]
+    fn default_no_ansi_when_colour_disabled() {
+        let out = render_default(&[pass_report(), fail_report(), error_report()], false);
+        assert!(
+            !out.contains('\x1b'),
+            "expected no ANSI escape codes when colour=false, got: {out:?}"
+        );
+        // Content must still be present
+        assert!(out.contains("PASS"), "expected PASS text: {out:?}");
+        assert!(out.contains("FAIL"), "expected FAIL text: {out:?}");
     }
 
     // ── narrative ──────────────────────────────────────────────────────────────
 
     #[test]
     fn narrative_all_pass_is_healthy() {
-        let out = narrative(&[pass_report()]);
+        let out = narrative(&[pass_report()], true);
         assert!(
             out.contains("looks healthy"),
             "expected healthy narrative, got: {out:?}"
@@ -247,7 +288,7 @@ mod tests {
 
     #[test]
     fn narrative_any_fail_shows_issues() {
-        let out = narrative(&[pass_report(), fail_report()]);
+        let out = narrative(&[pass_report(), fail_report()], true);
         assert!(
             out.contains("your attention"),
             "expected attention narrative, got: {out:?}"
@@ -256,7 +297,7 @@ mod tests {
 
     #[test]
     fn narrative_warn_no_fail_shows_look() {
-        let out = narrative(&[pass_report(), warn_report()]);
+        let out = narrative(&[pass_report(), warn_report()], true);
         assert!(
             out.contains("worth a look"),
             "expected look narrative, got: {out:?}"
@@ -265,7 +306,7 @@ mod tests {
 
     #[test]
     fn narrative_error_always_called_out() {
-        let out = narrative(&[pass_report(), error_report()]);
+        let out = narrative(&[pass_report(), error_report()], true);
         assert!(
             out.contains("could not be scanned"),
             "expected error call-out, got: {out:?}"
@@ -274,7 +315,7 @@ mod tests {
 
     #[test]
     fn narrative_fail_and_error_both_present() {
-        let out = narrative(&[fail_report(), error_report()]);
+        let out = narrative(&[fail_report(), error_report()], true);
         assert!(out.contains("your attention"), "missing fail text: {out:?}");
         assert!(
             out.contains("could not be scanned"),
@@ -284,7 +325,7 @@ mod tests {
 
     #[test]
     fn narrative_empty_no_modules() {
-        let out = narrative(&[]);
+        let out = narrative(&[], true);
         assert!(
             out.contains("No modules"),
             "expected no-modules message, got: {out:?}"
@@ -295,7 +336,7 @@ mod tests {
 
     #[test]
     fn verbose_shows_finding_title_and_severity() {
-        let out = render_verbose(&[fail_report()]);
+        let out = render_verbose(&[fail_report()], true);
         assert!(out.contains("HIGH"), "expected HIGH badge: {out:?}");
         assert!(
             out.contains("Unexpected setuid binary"),
@@ -305,14 +346,14 @@ mod tests {
 
     #[test]
     fn verbose_shows_detail_and_remediation() {
-        let out = render_verbose(&[fail_report()]);
+        let out = render_verbose(&[fail_report()], true);
         assert!(out.contains("Some detail"), "expected detail: {out:?}");
         assert!(out.contains("Fix it"), "expected remediation: {out:?}");
     }
 
     #[test]
     fn verbose_pass_shows_no_findings_section() {
-        let out = render_verbose(&[pass_report()]);
+        let out = render_verbose(&[pass_report()], true);
         assert!(out.contains("PASS"), "expected PASS: {out:?}");
         // No finding blocks for a PASS module with no findings
         assert!(!out.contains("HIGH"), "unexpected HIGH badge: {out:?}");

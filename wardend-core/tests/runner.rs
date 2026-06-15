@@ -145,6 +145,68 @@ fn run_plugin_timeout_produces_error_status() {
     );
 }
 
+#[test]
+fn run_plugin_timeout_kills_child_process() {
+    let dir = TempDir::new().unwrap();
+    let pid_file = dir.path().join("plugin.pid");
+    let pid_path = pid_file.to_string_lossy().into_owned();
+
+    // Script writes its own PID to a file before sleeping so we can check it later.
+    let script = format!(
+        r#"#!/bin/sh
+if [ "$1" = "--describe" ]; then
+    echo '{{"name":"mock-kill","proto_version":1,"required_capabilities":[],"summary":"Kill regression","signature":null}}'
+else
+    echo $$ > {pid_path}
+    sleep 999
+fi
+"#
+    );
+    let path = write_mock_plugin(&dir, "wardend-plugin-killtest", &script);
+
+    let report = rt().block_on(run_plugin(
+        &path,
+        "scan-kill",
+        false,
+        Duration::from_millis(400),
+    ));
+    assert_eq!(report.status, Status::Error);
+
+    // Give the OS a moment to deliver the SIGKILL.
+    std::thread::sleep(Duration::from_millis(150));
+
+    if pid_file.exists() {
+        let pid_str = std::fs::read_to_string(&pid_file).unwrap();
+        let pid: u32 = pid_str
+            .trim()
+            .parse()
+            .expect("pid file must contain a number");
+        // A killed-but-not-yet-reaped process shows as zombie (state 'Z') in /proc.
+        // Either the process is gone entirely OR it is a zombie — both mean it is no
+        // longer executing.  A still-alive sleeping process would have state 'S'.
+        assert!(
+            !process_is_running(pid),
+            "plugin process {pid} is still running after timeout — kill_on_drop not set"
+        );
+    }
+    // If the pid file was never written, the process was killed before it could write it — also correct.
+}
+
+/// Returns true only if the process exists AND is not a zombie (i.e. still executing).
+fn process_is_running(pid: u32) -> bool {
+    let status_path = format!("/proc/{pid}/status");
+    let Ok(content) = std::fs::read_to_string(status_path) else {
+        return false; // process no longer exists
+    };
+    for line in content.lines() {
+        if let Some(rest) = line.strip_prefix("State:") {
+            // State line looks like "State:\tZ (zombie)" or "State:\tS (sleeping)"
+            return !rest.contains('Z');
+        }
+    }
+    true
+}
+
 // ── run_plugin: bad protocol ──────────────────────────────────────────────────
 
 #[test]
