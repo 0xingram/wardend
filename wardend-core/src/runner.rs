@@ -111,6 +111,7 @@ async fn describe_plugin(plugin_path: &Path, timeout: Duration) -> Result<Manife
             .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::null())
+            .kill_on_drop(true)
             .output()
             .await
             .context("spawning plugin --describe")
@@ -138,6 +139,7 @@ async fn spawn_plugin_scan(plugin_path: &Path, request_json: &str) -> Result<Str
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::null())
+        .kill_on_drop(true)
         .spawn()
         .context("spawning plugin for scan")?;
 

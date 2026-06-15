@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use std::io::IsTerminal as _;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
@@ -84,10 +85,11 @@ fn cmd_scan(verbose: bool, json: bool, offline: bool) -> Result<()> {
     let reports: Vec<ModuleReport> =
         serde_json::from_str(raw).context("parsing wardend-core JSON output")?;
 
+    let colour = std::io::stdout().is_terminal();
     if verbose {
-        print!("{}", wardend_cli::render_verbose(&reports));
+        print!("{}", wardend_cli::render_verbose(&reports, colour));
     } else {
-        print!("{}", wardend_cli::render_default(&reports));
+        print!("{}", wardend_cli::render_default(&reports, colour));
     }
     Ok(())
 }
