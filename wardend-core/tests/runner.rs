@@ -124,10 +124,19 @@ fn run_plugin_passes_offline_flag_in_request() {
     assert_eq!(report.status, Status::Pass);
 }
 
+// Serialise timeout tests: both leave orphaned child processes and can interfere
+// with each other's describe-phase spawns when run concurrently on the shared runtime.
+fn timeout_test_lock() -> &'static std::sync::Mutex<()> {
+    static LOCK: std::sync::OnceLock<std::sync::Mutex<()>> = std::sync::OnceLock::new();
+    LOCK.get_or_init(|| std::sync::Mutex::new(()))
+}
+
 // ── run_plugin: timeout ───────────────────────────────────────────────────────
 
 #[test]
 fn run_plugin_timeout_produces_error_status() {
+    let _guard = timeout_test_lock().lock().unwrap();
+
     let dir = TempDir::new().unwrap();
     let path = write_mock_plugin(&dir, "wardend-plugin-hang", HANG_SCRIPT);
 
@@ -147,6 +156,7 @@ fn run_plugin_timeout_produces_error_status() {
 
 #[test]
 fn run_plugin_timeout_kills_child_process() {
+    let _guard = timeout_test_lock().lock().unwrap();
     let dir = TempDir::new().unwrap();
     let pid_file = dir.path().join("plugin.pid");
     let pid_path = pid_file.to_string_lossy().into_owned();
