@@ -1,0 +1,22 @@
+# Maintainer: Evil Actor <evil@example.com>
+pkgname=npm-pip-abuser
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="Package that runs npm and pip inside build"
+arch=('x86_64')
+url="https://github.com/evil/npm-pip-abuser"
+license=('MIT')
+depends=('nodejs' 'python')
+source=("https://github.com/evil/npm-pip-abuser/archive/v${pkgver}.tar.gz")
+sha256sums=('abc123def456abc123def456abc123def456abc123def456abc123def456abc123')
+
+build() {
+    cd "$srcdir/$pkgname-$pkgver"
+    npm install
+    pip install requests
+}
+
+package() {
+    cd "$srcdir/$pkgname-$pkgver"
+    install -Dm755 app.js "$pkgdir/usr/lib/$pkgname/app.js"
+}

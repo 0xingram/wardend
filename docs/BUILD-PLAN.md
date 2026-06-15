@@ -67,7 +67,7 @@ default/verbose/json given fixed `ScanResult`s.
 
 ---
 
-## Slice 2 — pkgbuild-audit (flagship)  ☐
+## Slice 2 — pkgbuild-audit (flagship)  ☑
 
 Goal: the module the project exists for. Built against a runner that already works, TDD against
 fixtures.

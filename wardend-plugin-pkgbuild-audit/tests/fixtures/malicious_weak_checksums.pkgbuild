@@ -1,0 +1,24 @@
+# Maintainer: Careless Dev <dev@example.com>
+pkgname=weak-checksums-pkg
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="Package with weak checksum configuration"
+arch=('x86_64')
+url="https://github.com/dev/weak-checksums-pkg"
+license=('MIT')
+depends=()
+source=("https://github.com/dev/weak-checksums-pkg/archive/v${pkgver}.tar.gz"
+        "patch.diff::https://github.com/dev/weak-checksums-pkg/commit/abc.patch")
+md5sums=('abc123def456abc123def456abc123de'
+         'SKIP')
+
+build() {
+    cd "$srcdir/$pkgname-$pkgver"
+    patch -p1 < ../patch.diff
+    make
+}
+
+package() {
+    cd "$srcdir/$pkgname-$pkgver"
+    make DESTDIR="$pkgdir" install
+}
