@@ -12,7 +12,7 @@ Status legend: ☐ not started · ◑ in progress · ☑ done
 
 ---
 
-## Slice 0 — Scaffold + CI  ☐
+## Slice 0 — Scaffold + CI  ◑
 
 Goal: an empty-but-correct workspace that compiles and passes CI.
 

@@ -1,0 +1,13 @@
+[workspace]
+resolver = "2"
+members = [
+    "wardend-proto",
+    "wardend-core",
+    "wardend-cli",
+]
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }

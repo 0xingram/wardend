@@ -1,0 +1,6 @@
+# Uncomment to use the mold linker for faster incremental builds.
+# Requires: pacman -S mold clang  (or equivalent for your distro).
+# Never force this on contributors — opt-in only.
+#
+# [target.x86_64-unknown-linux-gnu]
+# rustflags = ["-C", "linker=clang", "-C", "link-arg=-fuse-ld=mold"]
