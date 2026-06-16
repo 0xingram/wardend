@@ -106,7 +106,11 @@ fn scan() -> Result<()> {
 
 fn fetch_pkgbuild(pkgname: &str) -> Result<String> {
     let url = format!("{AUR_PKGBUILD_URL_PREFIX}{pkgname}");
-    let response = ureq::get(&url).call().context("HTTP request to AUR cgit")?;
+    let connector = ureq::native_tls::TlsConnector::new().context("creating TLS connector")?;
+    let agent = ureq::AgentBuilder::new()
+        .tls_connector(std::sync::Arc::new(connector))
+        .build();
+    let response = agent.get(&url).call().context("HTTP request to AUR cgit")?;
     let body = response
         .into_string()
         .context("reading AUR response body")?;

@@ -42,12 +42,26 @@ pub trait FeedFetcher: Send + Sync {
     fn post_bytes(&self, url: &str, body: &[u8]) -> Result<Vec<u8>>;
 }
 
-/// Production HTTP fetcher backed by ureq.
+/// Production HTTP fetcher backed by ureq + native-tls.
 pub struct UreqFetcher;
+
+impl UreqFetcher {
+    // ureq::get/post use the default agent which has no TLS backend when the
+    // `native-tls` feature is used instead of the default `tls` (rustls) feature.
+    // We must build an agent with an explicit TLS connector every call.
+    fn agent() -> Result<ureq::Agent> {
+        let connector =
+            ureq::native_tls::TlsConnector::new().context("creating native TLS connector")?;
+        Ok(ureq::AgentBuilder::new()
+            .tls_connector(std::sync::Arc::new(connector))
+            .build())
+    }
+}
 
 impl FeedFetcher for UreqFetcher {
     fn get_bytes(&self, url: &str) -> Result<Vec<u8>> {
-        let response = ureq::get(url)
+        let response = Self::agent()?
+            .get(url)
             .call()
             .with_context(|| format!("GET {url}"))?;
         let mut bytes = Vec::new();
@@ -59,7 +73,8 @@ impl FeedFetcher for UreqFetcher {
     }
 
     fn post_bytes(&self, url: &str, body: &[u8]) -> Result<Vec<u8>> {
-        let response = ureq::post(url)
+        let response = Self::agent()?
+            .post(url)
             .set("Content-Type", "application/json")
             .send_bytes(body)
             .with_context(|| format!("POST {url}"))?;
@@ -188,7 +203,7 @@ impl FeedManager {
         match self.fetch_and_cache_nvd() {
             Ok(entries) => eprintln!("  NVD: {} entries cached.", entries.len()),
             Err(e) => {
-                eprintln!("  NVD update failed: {e}");
+                eprintln!("  NVD update failed: {e:#}");
                 errors.push(e);
             }
         }
