@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+ "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!--
+  Install to: /usr/share/polkit-1/actions/dev.wardend.scan.policy
+  This action is referenced by `pkexec` when wardend-cli elevates wardend-core.
+-->
+<policyconfig>
+  <action id="dev.wardend.scan">
+    <description>Run a wardend security scan</description>
+    <message>wardend needs privileges to run a security scan</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/wardend/wardend-core</annotate>
+    <annotate key="org.freedesktop.policykit.exec.allow_gui">true</annotate>
+  </action>
+</policyconfig>

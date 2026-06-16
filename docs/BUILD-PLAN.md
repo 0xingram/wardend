@@ -113,15 +113,30 @@ Goal: low-architectural-risk output-parsing shim; slots in any time after Slice 
 
 ---
 
-## Slice 5 — Packaging & privilege (AUR)  ☐
+## Slice 5 — Packaging & privilege (AUR)  ☑
 
 Goal: make the two-binary + polkit model real for install.
 
-- polkit action `dev.wardend.scan`; `wardend scan` → `pkexec /usr/lib/wardend/wardend-core …`.
-- systemd **timer** for daily feed updates.
+- polkit action `dev.wardend.scan` → `packaging/dev.wardend.scan.policy`.
+- `wardend scan` → `pkexec /usr/lib/wardend/wardend-core scan` in production mode;
+  dev mode bypasses pkexec when `WARDEND_CORE_BIN` or an adjacent binary is found.
+- `wardend-core feeds update` subcommand — called by the systemd timer daily.
+- systemd units → `packaging/wardend-feeds.{service,timer}`.
+- `wardend-core` now reads `/etc/wardend/config.toml` (or `WARDEND_CONFIG` env var) at
+  startup; missing file silently uses defaults. Per-module config tables are forwarded as
+  `ScanRequest.config`.
 - file layout: `/usr/bin/wardend`, `/usr/lib/wardend/wardend-core`,
   `/usr/lib/wardend/plugins/`, `/etc/wardend/config.toml`, `/var/lib/wardend/feeds/`.
-- AUR `PKGBUILD` (`wardend`, `wardend-git`). `.deb`/`.rpm` deferred.
+- AUR `PKGBUILD` (`wardend`) + `PKGBUILD.git` (`wardend-git`). `.deb`/`.rpm` deferred.
+
+**Manual install steps (requires root):**
+```bash
+sudo install -Dm644 packaging/dev.wardend.scan.policy \
+    /usr/share/polkit-1/actions/dev.wardend.scan.policy
+cargo build --release --workspace
+sudo install -Dm755 target/release/wardend-core /usr/lib/wardend/wardend-core
+```
+Then `wardend scan` will show a polkit dialog and run the full report.
 
 **Acceptance:** installs on CachyOS; `wardend scan` elevates via polkit and runs the full set.
 

@@ -1,0 +1,79 @@
+# Maintainer: Marcus Ingram <claude@ingrams.cloud>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+pkgname=wardend
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Desktop-first Linux security scanner — is my computer safe?'
+arch=('x86_64' 'aarch64')
+url='https://wardend.dev'
+license=('GPL-3.0-or-later')
+depends=('polkit' 'rkhunter')
+makedepends=('rust' 'cargo')
+backup=('etc/wardend/config.toml')
+# Replace _commit with the tag SHA or tag name when a release tag exists.
+_commit='6306608467c790dff3961fd04cb7d93acb87ffbc'
+source=("wardend-$pkgver.tar.gz::https://github.com/marcus-ingram/wardend/archive/$_commit.tar.gz")
+sha256sums=('SKIP')  # Replace with actual checksum before publishing to AUR
+
+build() {
+    cd "wardend-$_commit"
+    CARGO_INCREMENTAL=0 cargo build --release --workspace
+}
+
+check() {
+    cd "wardend-$_commit"
+    cargo test --workspace
+}
+
+package() {
+    cd "wardend-$_commit"
+
+    # Unprivileged CLI
+    install -Dm755 target/release/wardend "$pkgdir/usr/bin/wardend"
+
+    # Privileged core (not on $PATH)
+    install -Dm755 target/release/wardend-core "$pkgdir/usr/lib/wardend/wardend-core"
+
+    # First-party plugins
+    for plugin in target/release/wardend-plugin-*; do
+        [[ -f "$plugin" && -x "$plugin" ]] || continue
+        install -Dm755 "$plugin" "$pkgdir/usr/lib/wardend/plugins/$(basename "$plugin")"
+    done
+
+    # polkit action
+    install -Dm644 packaging/dev.wardend.scan.policy \
+        "$pkgdir/usr/share/polkit-1/actions/dev.wardend.scan.policy"
+
+    # Default config (marked as backup so pacman preserves user edits)
+    install -Dm644 /dev/stdin "$pkgdir/etc/wardend/config.toml" <<'EOF'
+# wardend configuration — /etc/wardend/config.toml
+plugin_dir = "/usr/lib/wardend/plugins"
+feed_dir   = "/var/lib/wardend/feeds"
+scan_timeout_secs = 30
+
+[modules.pkgbuild-audit]
+# (empty = defaults)
+
+[modules.cve-check]
+# (empty = defaults)
+EOF
+
+    # Feeds directory (empty, owned root:root 0755)
+    install -dm755 "$pkgdir/var/lib/wardend/feeds"
+
+    # systemd timer units
+    install -Dm644 packaging/wardend-feeds.service \
+        "$pkgdir/usr/lib/systemd/system/wardend-feeds.service"
+    install -Dm644 packaging/wardend-feeds.timer \
+        "$pkgdir/usr/lib/systemd/system/wardend-feeds.timer"
+}
+
+post_install() {
+    systemctl enable --now wardend-feeds.timer
+    echo "wardend: polkit action installed — run 'wardend scan' to verify."
+}
+
+post_remove() {
+    systemctl disable --now wardend-feeds.timer || true
+}

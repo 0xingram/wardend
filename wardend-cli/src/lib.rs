@@ -1,8 +1,62 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::fmt::Write as _;
+use std::path::PathBuf;
 
+use anyhow::{Result, bail};
 use wardend_proto::{ModuleReport, Severity, Status};
+
+// ── Core binary discovery ─────────────────────────────────────────────────────
+
+/// How to invoke `wardend-core`.
+///
+/// - `Dev` — invoke the binary directly (no pkexec). Used when running from a build tree
+///   or when `WARDEND_CORE_BIN` overrides the path.
+/// - `Production` — invoke via `pkexec` so polkit handles privilege elevation.
+pub enum CoreMode {
+    Dev(PathBuf),
+    Production(PathBuf),
+}
+
+/// Locate `wardend-core` and decide whether to use pkexec.
+///
+/// Precedence:
+/// 1. `WARDEND_CORE_BIN` env var → dev mode (direct invocation, no pkexec).
+/// 2. Binary adjacent to the CLI exe (covers `cargo run`) → dev mode.
+/// 3. Installed path `/usr/lib/wardend/wardend-core` → production mode (pkexec).
+///
+/// # Errors
+/// Returns an error if `wardend-core` cannot be found by any of the above methods.
+pub fn find_core() -> Result<CoreMode> {
+    find_core_inner(std::env::var("WARDEND_CORE_BIN").ok().as_deref())
+}
+
+/// Inner implementation, accepting an optional `WARDEND_CORE_BIN` override.
+/// Extracted for testability without `unsafe` env-var mutation.
+///
+/// # Errors
+/// Returns an error if `wardend-core` cannot be found by any of the lookup methods.
+pub fn find_core_inner(core_bin_override: Option<&str>) -> Result<CoreMode> {
+    if let Some(path) = core_bin_override {
+        return Ok(CoreMode::Dev(PathBuf::from(path)));
+    }
+    if let Ok(exe) = std::env::current_exe()
+        && let Some(dir) = exe.parent()
+    {
+        let candidate = dir.join("wardend-core");
+        if candidate.exists() {
+            return Ok(CoreMode::Dev(candidate));
+        }
+    }
+    let installed = PathBuf::from("/usr/lib/wardend/wardend-core");
+    if installed.exists() {
+        return Ok(CoreMode::Production(installed));
+    }
+    bail!(
+        "wardend-core not found — run 'cargo build --workspace' first, \
+         or set WARDEND_CORE_BIN to its path"
+    )
+}
 
 // ── ANSI helpers ──────────────────────────────────────────────────────────────
 
@@ -160,6 +214,9 @@ pub fn narrative(reports: &[ModuleReport], colour: bool) -> String {
 
 #[cfg(test)]
 mod tests {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    use tempfile::TempDir;
     use wardend_proto::{Finding, ScanResult};
 
     use super::*;
@@ -385,5 +442,49 @@ mod tests {
             result_obj.get("status").is_none(),
             "ScanResult sub-object must not have a status field; got: {result_obj}"
         );
+    }
+
+    // ── find_core / dev-bypass ────────────────────────────────────────────────
+
+    /// `WARDEND_CORE_BIN` must produce `CoreMode::Dev` so the CLI invokes the binary
+    /// directly without pkexec — exercisable in development without polkit installed.
+    ///
+    /// Uses `find_core_inner` to avoid `unsafe` env-var mutation; the public
+    /// `find_core()` reads `WARDEND_CORE_BIN` and delegates here.
+    #[test]
+    fn dev_bypass_via_wardend_core_bin_env_var() {
+        let tmp = TempDir::new().unwrap();
+        let fake_core = tmp.path().join("wardend-core");
+
+        // A real executable in a TempDir, mimicking what cargo build produces.
+        std::fs::write(&fake_core, b"#!/bin/sh\nexec true\n").unwrap();
+        std::fs::set_permissions(&fake_core, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+        let path_str = fake_core.to_str().unwrap();
+        match super::find_core_inner(Some(path_str)).unwrap() {
+            super::CoreMode::Dev(p) => {
+                assert_eq!(p, fake_core, "dev path must match the override value")
+            }
+            super::CoreMode::Production(_) => {
+                panic!("expected Dev mode when WARDEND_CORE_BIN is set, got Production")
+            }
+        }
+    }
+
+    #[test]
+    fn production_mode_when_no_override_and_no_adjacent_binary() {
+        // When neither override nor an adjacent binary is present and the installed
+        // path does not exist, find_core_inner must return an error.
+        // (If /usr/lib/wardend/wardend-core is actually installed on this machine
+        //  this test would see Production — that's still the correct behaviour.)
+        let result = super::find_core_inner(None);
+        // Either Production (installed) or an error (not installed) — never Dev.
+        if let Ok(mode) = result {
+            assert!(
+                matches!(mode, super::CoreMode::Production(_)),
+                "without override or adjacent binary, must be Production or error"
+            );
+        }
+        // Error case (wardend-core not installed) is also valid — just verify no panic.
     }
 }

@@ -1,0 +1,9 @@
+[Unit]
+Description=wardend daily feed update
+Documentation=https://wardend.dev
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/wardend/wardend-core feeds update

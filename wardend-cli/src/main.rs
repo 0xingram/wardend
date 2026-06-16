@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::io::IsTerminal as _;
-use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
 use anyhow::{Context as _, Result, bail};
 use clap::{Parser, Subcommand};
 use wardend_proto::ModuleReport;
+
+use wardend_cli::CoreMode;
 
 #[derive(Parser)]
 #[command(name = "wardend", about = "Is my computer safe?")]
@@ -50,23 +51,39 @@ fn run() -> Result<()> {
 }
 
 fn cmd_scan(verbose: bool, json: bool, offline: bool) -> Result<()> {
-    let core = find_core_binary()?;
+    let mode = wardend_cli::find_core()?;
 
-    let mut cmd = Command::new(&core);
-    cmd.arg("scan");
+    let mut cmd = match &mode {
+        CoreMode::Dev(path) => {
+            let mut c = Command::new(path);
+            c.arg("scan");
+            c
+        }
+        CoreMode::Production(path) => {
+            let mut c = Command::new("pkexec");
+            c.arg(path).arg("scan");
+            c
+        }
+    };
+
     if offline {
         cmd.arg("--offline");
     }
+
     // Propagate WARDEND_PLUGIN_DIR so core can find plugins in dev mode.
     if let Ok(plugin_dir) = std::env::var("WARDEND_PLUGIN_DIR") {
         cmd.env("WARDEND_PLUGIN_DIR", plugin_dir);
     }
 
+    let core_display = match &mode {
+        CoreMode::Dev(p) | CoreMode::Production(p) => p.display().to_string(),
+    };
+
     let output = cmd
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())
         .output()
-        .with_context(|| format!("launching wardend-core at {}", core.display()))?;
+        .with_context(|| format!("launching wardend-core at {core_display}"))?;
 
     if !output.status.success() {
         bail!(
@@ -92,32 +109,4 @@ fn cmd_scan(verbose: bool, json: bool, offline: bool) -> Result<()> {
         print!("{}", wardend_cli::render_default(&reports, colour));
     }
     Ok(())
-}
-
-/// Locate the wardend-core binary.
-///
-/// Order of precedence:
-/// 1. `WARDEND_CORE_BIN` env var (explicit override).
-/// 2. Adjacent to the CLI binary (covers `cargo run`-style dev invocation).
-/// 3. Installed path `/usr/lib/wardend/wardend-core`.
-fn find_core_binary() -> Result<PathBuf> {
-    if let Ok(path) = std::env::var("WARDEND_CORE_BIN") {
-        return Ok(PathBuf::from(path));
-    }
-    if let Ok(exe) = std::env::current_exe()
-        && let Some(dir) = exe.parent()
-    {
-        let candidate = dir.join("wardend-core");
-        if candidate.exists() {
-            return Ok(candidate);
-        }
-    }
-    let installed = PathBuf::from("/usr/lib/wardend/wardend-core");
-    if installed.exists() {
-        return Ok(installed);
-    }
-    bail!(
-        "wardend-core not found — run 'cargo build --workspace' first, \
-         or set WARDEND_CORE_BIN to its path"
-    )
 }
