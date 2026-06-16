@@ -1,21 +1,24 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+pub mod config;
 pub mod feeds;
 pub mod runner;
 pub mod status;
 
+pub use config::Config;
 pub use runner::{discover_plugins, run_plugin};
 pub use status::derive_status;
 use wardend_proto::{ModuleReport, ScanResult, Status};
 
 /// Run every discovered plugin and return one `ModuleReport` per module.
-pub async fn run_scan(plugin_dir: &std::path::Path, offline: bool) -> Vec<ModuleReport> {
+pub async fn run_scan(cfg: &Config, offline: bool) -> Vec<ModuleReport> {
     use std::time::Duration;
     use tokio::task::JoinSet;
     use uuid::Uuid;
 
     let scan_id = Uuid::new_v4().to_string();
-    let plugins = discover_plugins(plugin_dir);
+    let plugins = discover_plugins(&cfg.plugin_dir);
+    let timeout = Duration::from_secs(cfg.scan_timeout_secs);
 
     if plugins.is_empty() {
         return vec![];
@@ -25,9 +28,7 @@ pub async fn run_scan(plugin_dir: &std::path::Path, offline: bool) -> Vec<Module
 
     for plugin_path in plugins {
         let id = scan_id.clone();
-        set.spawn(async move {
-            runner::run_plugin(&plugin_path, &id, offline, Duration::from_secs(30)).await
-        });
+        set.spawn(async move { runner::run_plugin(&plugin_path, &id, offline, timeout).await });
     }
 
     let mut reports = Vec::new();

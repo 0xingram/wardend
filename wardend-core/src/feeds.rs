@@ -178,6 +178,24 @@ impl FeedManager {
         Ok(None)
     }
 
+    /// Fetch all feeds, printing progress to stderr. Returns any errors encountered.
+    /// Called by `wardend-core feeds update` (run as root by the systemd timer).
+    #[must_use]
+    pub fn update_all(&self) -> Vec<anyhow::Error> {
+        let mut errors = Vec::new();
+
+        eprintln!("Updating NVD CVE feed...");
+        match self.fetch_and_cache_nvd() {
+            Ok(entries) => eprintln!("  NVD: {} entries cached.", entries.len()),
+            Err(e) => {
+                eprintln!("  NVD update failed: {e}");
+                errors.push(e);
+            }
+        }
+
+        errors
+    }
+
     fn load_mb_cache(&self) -> Result<Vec<MalwareHashInfo>> {
         let path = self.mb_cache_path();
         if !path.exists() {
