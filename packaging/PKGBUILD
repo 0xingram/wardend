@@ -10,10 +10,11 @@ url='https://wardend.dev'
 license=('GPL-3.0-or-later')
 depends=('polkit' 'rkhunter')
 makedepends=('rust' 'cargo')
+install=wardend.install
 backup=('etc/wardend/config.toml')
 # Replace _commit with the tag SHA or tag name when a release tag exists.
-_commit='6306608467c790dff3961fd04cb7d93acb87ffbc'
-source=("wardend-$pkgver.tar.gz::https://github.com/marcus-ingram/wardend/archive/$_commit.tar.gz")
+_commit='d5b2a9d586931d3b70c5bae83fed314c20bacd75'
+source=("wardend-$pkgver.tar.gz::https://github.com/0xingram/wardend/archive/$_commit.tar.gz")
 sha256sums=('SKIP')  # Replace with actual checksum before publishing to AUR
 
 build() {
@@ -67,13 +68,4 @@ EOF
         "$pkgdir/usr/lib/systemd/system/wardend-feeds.service"
     install -Dm644 packaging/wardend-feeds.timer \
         "$pkgdir/usr/lib/systemd/system/wardend-feeds.timer"
-}
-
-post_install() {
-    systemctl enable --now wardend-feeds.timer
-    echo "wardend: polkit action installed — run 'wardend scan' to verify."
-}
-
-post_remove() {
-    systemctl disable --now wardend-feeds.timer || true
 }

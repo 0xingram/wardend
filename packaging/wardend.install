@@ -1,0 +1,12 @@
+post_install() {
+    systemctl enable --now wardend-feeds.timer 2>/dev/null || true
+    echo "wardend: polkit action installed — run 'wardend scan' to verify."
+}
+
+post_upgrade() {
+    systemctl restart wardend-feeds.timer 2>/dev/null || true
+}
+
+post_remove() {
+    systemctl disable --now wardend-feeds.timer 2>/dev/null || true
+}

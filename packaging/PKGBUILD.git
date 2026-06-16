@@ -1,6 +1,7 @@
 # Maintainer: Marcus Ingram <claude@ingrams.cloud>
 # SPDX-License-Identifier: GPL-3.0-or-later
 # VCS package: tracks HEAD of the main branch.
+# For local testing use:  source=("wardend::git+file:///home/mingram/Dev/wardend")
 
 pkgname=wardend-git
 pkgver=r0.HEAD
@@ -13,8 +14,9 @@ depends=('polkit' 'rkhunter')
 makedepends=('rust' 'cargo' 'git')
 provides=('wardend')
 conflicts=('wardend')
+install=wardend.install
 backup=('etc/wardend/config.toml')
-source=("wardend::git+https://github.com/marcus-ingram/wardend.git")
+source=("wardend::git+https://github.com/0xingram/wardend.git")
 sha256sums=('SKIP')
 
 pkgver() {
@@ -65,13 +67,4 @@ EOF
         "$pkgdir/usr/lib/systemd/system/wardend-feeds.service"
     install -Dm644 packaging/wardend-feeds.timer \
         "$pkgdir/usr/lib/systemd/system/wardend-feeds.timer"
-}
-
-post_install() {
-    systemctl enable --now wardend-feeds.timer
-    echo "wardend: polkit action installed — run 'wardend scan' to verify."
-}
-
-post_remove() {
-    systemctl disable --now wardend-feeds.timer || true
 }
