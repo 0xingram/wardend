@@ -4,7 +4,7 @@
 # For local testing use:  source=("wardend::git+file:///home/mingram/Dev/wardend")
 
 pkgname=wardend-git
-pkgver=r10.a30f199
+pkgver=r11.e13d07b
 pkgrel=1
 pkgdesc='Desktop-first Linux security scanner — is my computer safe? (git)'
 arch=('x86_64' 'aarch64')
@@ -41,7 +41,7 @@ package() {
     install -Dm755 target/release/wardend-core "$pkgdir/usr/lib/wardend/wardend-core"
 
     for plugin in target/release/wardend-plugin-*; do
-        [[ -f "$plugin" && -x "$plugin" ]] || continue
+        [[ -f "$plugin" && -x "$plugin" && "$plugin" != *.d ]] || continue
         install -Dm755 "$plugin" "$pkgdir/usr/lib/wardend/plugins/$(basename "$plugin")"
     done
 

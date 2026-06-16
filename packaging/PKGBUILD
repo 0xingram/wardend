@@ -38,7 +38,7 @@ package() {
 
     # First-party plugins
     for plugin in target/release/wardend-plugin-*; do
-        [[ -f "$plugin" && -x "$plugin" ]] || continue
+        [[ -f "$plugin" && -x "$plugin" && "$plugin" != *.d ]] || continue
         install -Dm755 "$plugin" "$pkgdir/usr/lib/wardend/plugins/$(basename "$plugin")"
     done
 

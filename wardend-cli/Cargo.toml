@@ -5,7 +5,7 @@ edition = "2024"
 license = "GPL-3.0-or-later"
 
 [[bin]]
-name = "wardend-cli"
+name = "wardend"
 path = "src/main.rs"
 
 [lib]
