@@ -12,7 +12,7 @@ path = "src/main.rs"
 wardend-proto = { path = "../wardend-proto" }
 serde_json = "1"
 anyhow = "1"
-ureq = { version = "2", features = ["tls"] }
+ureq = { version = "2", default-features = false, features = ["native-tls"] }
 
 [lints]
 workspace = true

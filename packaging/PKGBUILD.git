@@ -4,13 +4,13 @@
 # For local testing use:  source=("wardend::git+file:///home/mingram/Dev/wardend")
 
 pkgname=wardend-git
-pkgver=r0.HEAD
+pkgver=r10.a30f199
 pkgrel=1
 pkgdesc='Desktop-first Linux security scanner — is my computer safe? (git)'
 arch=('x86_64' 'aarch64')
 url='https://wardend.dev'
 license=('GPL-3.0-or-later')
-depends=('polkit' 'rkhunter')
+depends=('polkit' 'rkhunter' 'openssl')
 makedepends=('rust' 'cargo' 'git')
 provides=('wardend')
 conflicts=('wardend')
